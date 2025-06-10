@@ -1,0 +1,8 @@
+{
+  "name": "MICR Check Verifier v2",
+  "description": "An application to upload or capture check images, extract MICR line data using AI, and parse it for verification.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "prompt": ""
+}
