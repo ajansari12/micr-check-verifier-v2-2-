@@ -10,7 +10,7 @@ import {
 import { API_MAX_RETRIES, API_RETRY_DELAY_MS } from '../constants';
 
 // Supabase configuration
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ansjwcydepcdfypykvnb.supabase.co';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Custom error class for Supabase connection issues
