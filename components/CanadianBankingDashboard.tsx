@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
 import { ChequeVerificationResult, CanadianChequeImageQuality, MicrValidationFields, SecurityAssessment, CanadianInstitution, DecisionIntelligence, ContactInfo } from '../types';
 import LoadingSpinner from './LoadingSpinner'; 
@@ -142,9 +141,39 @@ const CanadianBankingDashboard: React.FC<CanadianBankingDashboardProps> = ({
   }, [result, decisionIntelligence]);
 
 
-  if (isLoading) { /* ... loading skeleton ... */ }
-  if (error) { /* ... error display ... */ }
-  if (!result) { /* ... no data display ... */ }
+  if (isLoading) {
+    return (
+      <div className="mt-4 print:mt-0">
+        <div className="bg-slate-200 animate-pulse p-4 rounded-t-lg">
+          <div className="h-6 bg-slate-300 rounded w-1/3"></div>
+        </div>
+        <div className="p-4 bg-slate-50 rounded-b-lg">
+          <LoadingSpinner />
+        </div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="mt-4 print:mt-0">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <p className="font-bold">Error:</p>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!result) {
+    return (
+      <div className="mt-4 print:mt-0">
+        <div className="bg-slate-100 border border-slate-300 text-slate-600 px-4 py-3 rounded">
+          <p>No verification result available.</p>
+        </div>
+      </div>
+    );
+  }
   
   // Destructure after null/error/loading checks
   const { verificationId, processingTimestamp, cpaImageQuality, micrValidation, securityAssessment, institutionDetails, aiComplianceAnalysis, aiInstitutionRecognition, aiFraudRiskAssessment } = result!;
@@ -192,7 +221,11 @@ const CanadianBankingDashboard: React.FC<CanadianBankingDashboardProps> = ({
     );
   };
   
-  const formatMicrLineDisplay = (micr: string | null | undefined) => { /* ... same as before ... */ };
+  const formatMicrLineDisplay = (micr: string | null | undefined) => {
+    if (!micr) return 'N/A';
+    return micr;
+  };
+  
   const chequeBranchCode = useMemo(() => result.micrValidation?.transitNumber?.substring(0, 5) || null, [result.micrValidation]);
   const chequeBranchLocation = useMemo(() => getBranchLocation(chequeBranchCode), [chequeBranchCode]);
 
@@ -297,20 +330,47 @@ const CanadianBankingDashboard: React.FC<CanadianBankingDashboardProps> = ({
           </DashboardCard>
         )}
         
-        {activeTab === 'micr' && ( /* ... MICR tab content as before ... */ )}
-        {activeTab === 'security' && ( /* ... Security tab content as before ... */ )}
-        {activeTab === 'imageQuality' && ( /* ... Image Quality tab content as before ... */ )}
-        {activeTab === 'institutions' && ( /* ... Institutions tab content as before ... */ )}
+        {activeTab === 'micr' && (
+          <DashboardCard title="MICR Analysis" icon="🔢">
+            <div className="text-center py-4 text-slate-500">
+              MICR tab content not yet implemented
+            </div>
+          </DashboardCard>
+        )}
+        
+        {activeTab === 'security' && (
+          <DashboardCard title="Security Analysis" icon="🔒">
+            <div className="text-center py-4 text-slate-500">
+              Security tab content not yet implemented
+            </div>
+          </DashboardCard>
+        )}
+        
+        {activeTab === 'imageQuality' && (
+          <DashboardCard title="Image Quality Assessment" icon="📷">
+            <div className="text-center py-4 text-slate-500">
+              Image Quality tab content not yet implemented
+            </div>
+          </DashboardCard>
+        )}
+        
+        {activeTab === 'institutions' && (
+          <DashboardCard title="Institution Directory" icon="🏦">
+            <div className="text-center py-4 text-slate-500">
+              Institution Directory tab content not yet implemented
+            </div>
+          </DashboardCard>
+        )}
       </div>
       <style>{`
-        /* ... print styles as before ... */
+        @media print {
+          .print\\:hidden { display: none !important; }
+          .print\\:mt-0 { margin-top: 0 !important; }
+          .print\\:p-0 { padding: 0 !important; }
+        }
       `}</style>
     </div>
   );
 };
-
-// Ensure all existing renderField, formatMicrLineDisplay, loading, error, no data states, and other tab contents
-// are still present. The provided snippet only focuses on the 'decision' tab and header status changes.
-// The full component would merge these new parts with the existing tab rendering logic.
 
 export default React.memo(CanadianBankingDashboard);
