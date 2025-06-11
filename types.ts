@@ -8,6 +8,10 @@ export interface ChequeData {
   auxiliaryOnUs?: string | null;
   transitNumberValid?: boolean | null; 
   rawExtractedMicr?: string | null; 
+  
+  // New fields for explicit extraction of branch and institution codes
+  branchCode?: string | null; // 5-digit branch code
+  institutionNumber?: string | null; // 3-digit institution number
 
   payeeName?: string | null;
   amountNumerals?: string | null;

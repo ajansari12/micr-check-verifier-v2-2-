@@ -190,8 +190,18 @@ const App: React.FC = () => {
         aiFraudRiskAssessment: fraudDataAI,
       };
 
-      // 2. Enhance with Canadian Banking Database
-      const bankingEnhancement = enhanceMicrWithBankingData(initialAggregatedAiResult);
+      // 2. Enhance with Canadian Banking Database using correct institution information
+      // Use the directly extracted branchCode and institutionNumber from the AI if available
+      const branchCode = baseChequeData.branchCode || (baseChequeData.transitNumber ? baseChequeData.transitNumber.substring(0, 5) : null);
+      const institutionNumber = baseChequeData.institutionNumber || (baseChequeData.transitNumber ? baseChequeData.transitNumber.substring(5, 8) : null);
+
+      // Ensure we're using the AI-provided or extracted institution number
+      const bankingEnhancement = enhanceMicrWithBankingData({
+        ...baseChequeData,
+        branchCode,
+        institutionNumber
+      });
+      
       const institutionDetailsFromDb = bankingEnhancement.institutionValidation.institution;
 
       // 3. Generate Decision Intelligence
@@ -211,6 +221,8 @@ const App: React.FC = () => {
       const findingsForDecisionAI: Partial<ChequeData> = {
         transitNumber: baseChequeData.transitNumber,
         transitNumberValid: baseChequeData.transitNumberValid,
+        branchCode: baseChequeData.branchCode || branchCode,
+        institutionNumber: baseChequeData.institutionNumber || institutionNumber,
         payeeName: baseChequeData.payeeName,
         amountNumerals: baseChequeData.amountNumerals,
         chequeDate: baseChequeData.chequeDate,
@@ -246,7 +258,7 @@ const App: React.FC = () => {
          } catch (e) { console.warn("Client-side date validation error:", e); }
       }
 
-      // 5. Client-side MICR Checksum Validation
+      // 5. Client-side MICR Checksum Validation - using the extracted or derived values
       const micrValidationFields: MicrValidationFields | null = baseChequeData.transitNumber
         ? {
             transitNumber: baseChequeData.transitNumber,
@@ -266,6 +278,10 @@ const App: React.FC = () => {
       // 7. Aggregate all results
       const fullResult: ChequeVerificationResult = {
         ...(initialAggregatedAiResult as ChequeData), // Base AI data
+        // Include the explicit branch code and institution number from AI or derived from transit number
+        branchCode: baseChequeData.branchCode || branchCode,
+        institutionNumber: baseChequeData.institutionNumber || institutionNumber,
+        
         securityAssessment: securityData,
         aiComplianceAnalysis: complianceData,
         aiInstitutionRecognition: institutionDataAI,

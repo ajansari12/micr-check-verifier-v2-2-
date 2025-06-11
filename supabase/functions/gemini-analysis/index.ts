@@ -222,44 +222,49 @@ async function analyzeChequeDetails(model: any, imageBase64: string) {
     JSON Structure to use:
     {
       "rawExtractedMicr": "string | null",
-      "transitNumber": "string | null", // 9-digit DDDDDFFFC
+      "transitNumber": "string | null",
+      "branchCode": "string | null",
+      "institutionNumber": "string | null",
       "accountNumber": "string | null",
-      "checkNumber": "string | null", // Serial number from MICR
-      "transactionCode": "string | null", // CPA006 Appendix VII code from MICR
-      "auxiliaryOnUs": "string | null", // Auxiliary On-Us field from MICR
-      "transitNumberValid": "boolean | null", // CPA checksum validation result for the 9-digit transit
+      "checkNumber": "string | null",
+      "transactionCode": "string | null",
+      "auxiliaryOnUs": "string | null",
+      "transitNumberValid": "boolean | null",
       "payeeName": "string | null",
-      "amountNumerals": "string | null", // e.g., "123.45"
+      "amountNumerals": "string | null",
       "amountWords": "string | null",
-      "currencyDesignation": "string | null", // e.g., "CDN FUNDS", "US DOLLARS", "CAD", "USD" from cheque face
-      "chequeDate": "string | null", // Extracted date string, ideally YYYY-MM-DD
-      "chequeDateValid": "boolean | null", // Basic plausibility and format check
-      "chequeDateFormatRecognized": "string | null", // e.g., "YYYYMMDD", "MMDDYYYY", "DDMMYYYY", "YYYY-MM-DD", "AI could not determine"
-      "printedDateIndicatorsPresent": "boolean | null", // e.g., M D Y, Year Month Day markers below date field
+      "currencyDesignation": "string | null",
+      "chequeDate": "string | null",
+      "chequeDateValid": "boolean | null",
+      "chequeDateFormatRecognized": "string | null",
+      "printedDateIndicatorsPresent": "boolean | null",
       "signaturePresent": "boolean | null",
-      "voidPantographDetected": "boolean | null", // If visual signs of a void pantograph are present
-      "alterationsPayeeSuspected": "boolean | null", // If payee name field shows signs of alteration
-      "alterationsAmountSuspected": "boolean | null", // If amount fields show signs of alteration
-      "inkColorAcceptable": "boolean | null", // True if dark ink (black/blue) used for key fields
-      "designIssues": ["string"], // Array of strings for issues like inverse printing, complex background
+      "voidPantographDetected": "boolean | null",
+      "alterationsPayeeSuspected": "boolean | null",
+      "alterationsAmountSuspected": "boolean | null",
+      "inkColorAcceptable": "boolean | null",
+      "designIssues": ["string"],
       "overallClarity": "'good' | 'fair' | 'poor' | null",
-      "processingNotes": "string | null" // Your general notes about parsing or any observations
+      "processingNotes": "string | null"
     }
 
     Detailed Instructions for Analysis:
     1.  **MICR Line Analysis (CPA Standard 006)**:
         *   \`rawExtractedMicr\`: Extract the full MICR line text as accurately as possible.
-        *   \`transitNumber\`: Identify the 9-digit Canadian transit number (format DDDDDFFFC: 5-digit Branch, 3-digit Institution, 1-digit Check Digit). If found, validate it using the CPA checksum algorithm: (d1*1 + d2*7 + d3*3 + d4*1 + d5*7 + d6*3 + d7*1 + d8*7 + d9*3) mod 10 == 0. Set \`transitNumberValid\` accordingly (true/false). If not 9 digits or not numeric, set to null.
+        *   \`transitNumber\`: Identify the 9-digit Canadian transit number (format DDDDDFFFC: 5-digit Branch, 3-digit Institution, 1-digit Check Digit). DO NOT add any leading zeros that are not actually in the MICR data.
+        *   \`branchCode\`: Extract the first 5 digits from the transit number. This is the branch code.
+        *   \`institutionNumber\`: Extract the next 3 digits (positions 6-8) from the transit number. This is the institution code. For Canadian banks: 001=BMO, 002=Scotiabank, 003=RBC, 004=TD, 006=National Bank, 010=CIBC, 016=HSBC.
+        *   If found, validate the 9-digit transit number using the CPA checksum algorithm: (d1*1 + d2*7 + d3*3 + d4*1 + d5*7 + d6*3 + d7*1 + d8*7 + d9*3) mod 10 == 0. Set \`transitNumberValid\` accordingly (true/false).
         *   \`accountNumber\`: Extract the account number.
         *   \`checkNumber\`: Extract the cheque serial number.
-        *   \`transactionCode\`: Identify the MICR transaction code. Usually 1-4 digits, often located between amount and account symbols, or at the end. Refer to CPA Standard 006 Appendix VII for common codes (e.g., "45", "33", "01").
+        *   \`transactionCode\`: Identify the MICR transaction code. Usually 1-4 digits, often located between amount and account symbols, or at the end.
         *   \`auxiliaryOnUs\`: Extract any auxiliary on-us field.
     2.  **Cheque Face Elements**:
         *   \`payeeName\`: Extract the payee's full name.
         *   \`amountNumerals\`: Extract the amount in numerals (e.g., "123.45").
         *   \`amountWords\`: Extract the amount written in words.
         *   \`currencyDesignation\`: Extract any explicit currency identifier (e.g., "CDN", "CAD", "USD", "US DOLLARS", "CDN FUNDS") from the cheque face.
-        *   \`chequeDate\`: Extract the date. Try to format as YYYY-MM-DD if possible. Indicate the format recognized in \`chequeDateFormatRecognized\`. Assess \`chequeDateValid\` for basic plausibility (e.g., not an impossible date). Note if printed date indicators (like M D Y markers) are present.
+        *   \`chequeDate\`: Extract the date. Try to format as YYYY-MM-DD if possible. Indicate the format recognized in \`chequeDateFormatRecognized\`. Assess \`chequeDateValid\` for basic plausibility.
         *   \`signaturePresent\`: Determine if a signature is visible in the designated signature area.
     3.  **Security and Fraud Indicators (Visual Assessment)**:
         *   \`voidPantographDetected\`: Check for visual patterns or text (like "VOID") that might indicate a void pantograph security feature.
@@ -267,10 +272,18 @@ async function analyzeChequeDetails(model: any, imageBase64: string) {
         *   \`alterationsAmountSuspected\`: Look for signs of tampering in the amount fields.
         *   \`inkColorAcceptable\`: Note if key fields are printed in dark, legible ink (e.g., black, dark blue).
     4.  **Image Quality & Design**:
-        *   \`designIssues\`: List any design characteristics that might impede OCR or indicate non-standard design (e.g., "Inverse MICR printing", "Very busy background pattern", "Handwritten MICR components").
+        *   \`designIssues\`: List any design characteristics that might impede OCR or indicate non-standard design.
         *   \`overallClarity\`: Assess the overall clarity of the image for OCR purposes.
-    5.  **JSON Output**: Ensure the entire response is ONLY the JSON object. If a field cannot be determined or is not applicable, set its value to null (or an empty array for \`designIssues\`). Provide any further observations or difficulties in \`processingNotes\`.
-    Be meticulous. Cross-verify information (e.g., amount in numerals vs. words if possible, though this is primarily extraction).
+    5.  **JSON Output**: Ensure the entire response is ONLY the JSON object. If a field cannot be determined or is not applicable, set its value to null (or an empty array for \`designIssues\`).
+    
+    IMPORTANT: 
+    - Pay special attention to the transit number (DDDDDFFFC) format. The first 5 digits (DDDDD) are the branch code, and the next 3 digits (FFF) are the institution number.
+    - Look carefully at the cheque for the Bank of Montreal (BMO) logo/branding - the institution number should be 001 for BMO.
+    - DO NOT add any leading zeros to the branch code or institution number unless they actually appear in the MICR line.
+    - Be precise about digit reading - confusing "0" and "O" or similar characters can lead to errors.
+    - Read the MICR line directly as printed - do not rearrange or reformat digits.
+    
+    Be meticulous and prioritize accuracy for Canadian banking compliance.
   `
 
   try {
