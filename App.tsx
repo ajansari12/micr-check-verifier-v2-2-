@@ -294,6 +294,33 @@ const App: React.FC = () => {
       if (appOperatingMode === 'single') setWizardActiveStep(5);
     } catch (err: any) {
       console.error("Error processing check image:", err);
+      
+      // Handle Supabase connection errors specifically
+      if (err.name === 'SupabaseConnectionError') {
+        setAlertInfo({ 
+          title: "Supabase Connection Required", 
+          message: err.message,
+          type: 'critical',
+          details: "To use AI analysis features, you need to connect this application to a Supabase project. Click the 'Connect to Supabase' button in the top right corner of the page.",
+          actions: [
+            { 
+              label: "How to Connect", 
+              onClick: () => setAlertInfo({
+                title: "Connecting to Supabase",
+                message: "1. Click 'Connect to Supabase' in the top right\n2. Create a new Supabase project or connect to existing one\n3. Deploy the required edge functions\n4. Try the analysis again",
+                type: 'info',
+                onDismiss: () => setAlertInfo(null)
+              }), 
+              type: 'secondary'
+            }
+          ],
+          onDismiss: () => setAlertInfo(null) 
+        });
+        if (appOperatingMode === 'single') setWizardActiveStep(5);
+        return;
+      }
+      
+      // Handle other errors
       let errorMessage = "An error occurred during Cheque analysis. ";
       if (err.message) errorMessage += err.message;
       else if (typeof err === 'string') errorMessage += err;
