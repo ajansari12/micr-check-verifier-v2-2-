@@ -73,6 +73,24 @@ const callSupabaseEdgeFunction = async <T,>(
       throw error;
     }
     
+    // Handle network-level fetch failures
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      const isLocalhost = SUPABASE_URL.includes('localhost');
+      const errorMessage = isLocalhost 
+        ? `Cannot connect to local Supabase instance at ${SUPABASE_URL}. Please ensure:
+           1. Supabase is running locally (run 'supabase status' to check)
+           2. The '${functionName}' Edge Function is deployed (run 'supabase functions deploy ${functionName}')
+           3. Your local firewall isn't blocking connections to localhost:54321`
+        : `Cannot connect to Supabase at ${SUPABASE_URL}. Please check your internet connection and Supabase project status.`;
+      
+      throw new SupabaseConnectionError(errorMessage);
+    }
+    
+    // Handle other network errors
+    if (error instanceof TypeError && (error.message.includes('NetworkError') || error.message.includes('fetch'))) {
+      throw new SupabaseConnectionError(`Network error connecting to Supabase: ${error.message}. Please check your internet connection and try again.`);
+    }
+    
     if (retries > 0) {
       console.warn(`${serviceName}: API call failed, retrying in ${API_RETRY_DELAY_MS / 1000}s... (${retries} retries left)`);
       await new Promise(resolve => setTimeout(resolve, API_RETRY_DELAY_MS));
