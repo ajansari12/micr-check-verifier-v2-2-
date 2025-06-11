@@ -9,7 +9,7 @@ max_rows = 1000
 enabled = true
 port = 54322
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://localhost:3000"]
+additional_redirect_urls = ["https://localhost:3000", "https://*.bolt.new"]
 jwt_expiry = 3600
 jwt_secret = "super-secret-jwt-token-with-at-least-32-characters-long"
 enable_signup = true
@@ -50,8 +50,35 @@ verify_jwt = false
 policy = "per_worker"
 inspector_port = 8083
 
-# Custom environment variables for Edge Functions
+# Enhanced environment variables for Edge Functions
 [env]
+# Core API Configuration
 GEMINI_API_KEY = "env.GEMINI_API_KEY"
+GEMINI_MODEL = "env.GEMINI_MODEL"
+GEMINI_TIMEOUT = "env.GEMINI_TIMEOUT"
+GEMINI_MAX_RETRIES = "env.GEMINI_MAX_RETRIES"
+
+# Supabase Configuration
 SUPABASE_URL = "env.SUPABASE_URL"
 SUPABASE_SERVICE_ROLE_KEY = "env.SUPABASE_SERVICE_ROLE_KEY"
+
+# Security Configuration
+MAX_IMAGE_SIZE = "env.MAX_IMAGE_SIZE"
+ALLOWED_IMAGE_TYPES = "env.ALLOWED_IMAGE_TYPES"
+ALLOWED_ORIGINS = "env.ALLOWED_ORIGINS"
+
+# Rate Limiting Configuration
+RATE_LIMIT_WINDOW_MS = "env.RATE_LIMIT_WINDOW_MS"
+RATE_LIMIT_MAX_REQUESTS = "env.RATE_LIMIT_MAX_REQUESTS"
+
+# Compliance Configuration
+LOG_ALL_OPERATIONS = "env.LOG_ALL_OPERATIONS"
+OSFI_REPORTING_THRESHOLD = "env.OSFI_REPORTING_THRESHOLD"
+
+# Feature Flags
+ENABLE_RATE_LIMITING = "env.ENABLE_RATE_LIMITING"
+ENABLE_SECURITY_HEADERS = "env.ENABLE_SECURITY_HEADERS"
+ENABLE_DETAILED_LOGGING = "env.ENABLE_DETAILED_LOGGING"
+
+# Application Environment
+APP_ENVIRONMENT = "env.APP_ENVIRONMENT"
