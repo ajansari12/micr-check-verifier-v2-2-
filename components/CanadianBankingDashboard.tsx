@@ -332,33 +332,579 @@ const CanadianBankingDashboard: React.FC<CanadianBankingDashboardProps> = ({
         
         {activeTab === 'micr' && (
           <DashboardCard title="MICR Analysis" icon="🔢">
-            <div className="text-center py-4 text-slate-500">
-              MICR tab content not yet implemented
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="p-3 border border-slate-200 rounded-md bg-slate-50">
+                  <h4 className="text-md font-semibold text-slate-700 mb-2">MICR Line Details</h4>
+                  <div className="py-2 border-b border-slate-200 last:border-b-0">
+                    <p className="text-sm font-medium text-slate-600">Raw Extracted MICR:</p>
+                    <div className="mt-1 p-2 bg-blue-50 rounded border border-blue-200 font-mono break-words">
+                      {result.rawExtractedMicr ? 
+                        Object.entries(MICR_SYMBOLS_MAP).reduce(
+                          (str, [key, symbol]) => str.replace(new RegExp(key, 'g'), symbol), 
+                          result.rawExtractedMicr
+                        ) : 
+                        <span className="text-slate-500 italic">Not detected</span>
+                      }
+                    </div>
+                  </div>
+                  {renderField("Account Number", result.accountNumber, {mono: true, copyable: true})}
+                  {renderField("Cheque/Serial Number", result.checkNumber, {mono: true, copyable: true})}
+                  {renderField("Transaction Code", result.transactionCode, {mono: true})}
+                  {renderField("Auxiliary On-Us", result.auxiliaryOnUs, {mono: true})}
+                </div>
+                
+                {result.micrValidation && (
+                  <div className="p-3 border border-slate-200 rounded-md bg-slate-50">
+                    <h4 className="text-md font-semibold text-slate-700 mb-2">MICR Validation Status</h4>
+                    {renderField("CPA Checksum Validation", null, {
+                      status: result.micrValidation.transitNumberCpaChecksumValid
+                    })}
+                    {renderField("Check Digit Valid", null, {
+                      status: result.micrValidation.checkDigitValid
+                    })}
+                    {renderField("E-13B Font Compliant", null, {
+                      status: result.micrValidation.e13bFontEncodingCompliant
+                    })}
+                  </div>
+                )}
+              </div>
+              
+              <div className="space-y-4">
+                {result.transitNumber && (
+                  <div className="p-3 border border-slate-200 rounded-md bg-slate-50">
+                    <h4 className="text-md font-semibold text-slate-700 mb-2">Transit/Routing Analysis</h4>
+                    <div className="py-2 border-b border-slate-200 last:border-b-0">
+                      <p className="text-sm font-medium text-slate-600 flex items-center">
+                        Full Transit Number 
+                        <StatusIndicator 
+                          status={result.transitNumberValid} 
+                          trueText="Valid" 
+                          falseText="Invalid" 
+                        />
+                      </p>
+                      <p className="text-lg font-mono font-semibold text-slate-700 mt-1">{result.transitNumber}</p>
+                      <div className="mt-2 grid grid-cols-2 gap-2 bg-blue-50 p-2 rounded">
+                        <div>
+                          <p className="text-xs font-medium text-slate-500">Branch Code:</p>
+                          <p className="font-mono">{result.transitNumber.substring(0, 5)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-500">Institution Code:</p>
+                          <p className="font-mono">{result.transitNumber.substring(5, 8)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-500">Check Digit:</p>
+                          <p className="font-mono">{result.transitNumber.substring(8, 9)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-500">MICR Format:</p>
+                          <p className="text-xs">CPA Standard 006</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {chequeBranchLocation && (
+                      <div className="py-2 border-b border-slate-200 last:border-b-0">
+                        <p className="text-sm font-medium text-slate-600">Branch Location:</p>
+                        <p className="text-slate-700">{chequeBranchLocation}</p>
+                      </div>
+                    )}
+                    
+                    {result.institutionDetails && (
+                      <div className="py-2 last:border-b-0">
+                        <p className="text-sm font-medium text-slate-600">Institution:</p>
+                        <p className="text-slate-700 font-medium">{result.institutionDetails.name}</p>
+                        <p className="text-xs text-slate-500">{result.institutionDetails.type} • {result.institutionDetails.status}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {result.processingNotes && (
+                  <div className="p-3 border border-amber-200 rounded-md bg-amber-50">
+                    <h4 className="text-sm font-semibold text-amber-800 mb-1">Processing Notes:</h4>
+                    <p className="text-xs text-amber-700 italic">{result.processingNotes}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </DashboardCard>
         )}
         
         {activeTab === 'security' && (
           <DashboardCard title="Security Analysis" icon="🔒">
-            <div className="text-center py-4 text-slate-500">
-              Security tab content not yet implemented
-            </div>
+            {result.securityAssessment ? (
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="p-3 border border-slate-200 rounded-md bg-slate-50">
+                    <h4 className="text-md font-semibold text-slate-700 mb-2">Security Risk Assessment</h4>
+                    <div className="py-2 border-b border-slate-200 last:border-b-0">
+                      <p className="text-sm font-medium text-slate-600">Risk Level:</p>
+                      <div className={`mt-1 px-3 py-2 rounded-md font-semibold text-white inline-block ${
+                        result.securityAssessment.fraudRiskLevel === 'Critical' ? 'bg-red-600' :
+                        result.securityAssessment.fraudRiskLevel === 'High' ? 'bg-red-500' :
+                        result.securityAssessment.fraudRiskLevel === 'Medium' ? 'bg-yellow-500 text-black' :
+                        result.securityAssessment.fraudRiskLevel === 'Low' ? 'bg-green-500' :
+                        'bg-slate-500'
+                      }`}>
+                        {result.securityAssessment.fraudRiskLevel || 'Unknown'}
+                      </div>
+                    </div>
+                    
+                    <div className="py-2 border-b border-slate-200 last:border-b-0">
+                      <p className="text-sm font-medium text-slate-600">OSFI Reportable:</p>
+                      <p className={`mt-1 ${result.securityAssessment.osfiReportableRisk ? 'text-red-600 font-semibold' : 'text-green-600'}`}>
+                        {result.securityAssessment.osfiReportableRisk ? 'Yes - requires reporting' : 'No - standard processing'}
+                      </p>
+                    </div>
+                    
+                    <div className="py-2 border-b border-slate-200 last:border-b-0">
+                      <p className="text-sm font-medium text-slate-600">Tamper Evidence:</p>
+                      <p className={`mt-1 ${
+                        result.securityAssessment.tamperEvidenceCheck === 'passed' ? 'text-green-600' :
+                        result.securityAssessment.tamperEvidenceCheck === 'failed' ? 'text-red-600' :
+                        'text-slate-600'
+                      }`}>
+                        {result.securityAssessment.tamperEvidenceCheck === 'passed' ? 'Passed - No tampering detected' :
+                         result.securityAssessment.tamperEvidenceCheck === 'failed' ? 'Failed - Tampering suspected' :
+                         'Unknown/Not assessed'}
+                      </p>
+                    </div>
+                    
+                    {result.securityAssessment.imageAuthenticityScore !== null && (
+                      <div className="py-2 last:border-b-0">
+                        <p className="text-sm font-medium text-slate-600">Image Authenticity Score:</p>
+                        <ProgressBar 
+                          score={result.securityAssessment.imageAuthenticityScore} 
+                          maxScore={100} 
+                        />
+                        <p className="text-xs text-slate-500 mt-1">
+                          {result.securityAssessment.imageAuthenticityScore > 80 ? 'High authenticity - image appears unaltered' :
+                           result.securityAssessment.imageAuthenticityScore > 50 ? 'Moderate authenticity - minor concerns' :
+                           'Low authenticity - significant concerns with image'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                
+                  {result.aiFraudRiskAssessment && (
+                    <div className="p-3 border border-slate-200 rounded-md bg-slate-50">
+                      <h4 className="text-md font-semibold text-slate-700 mb-2">AI Fraud Risk Analysis</h4>
+                      
+                      {result.aiFraudRiskAssessment.overallFraudRiskScore !== null && (
+                        <div className="py-2 border-b border-slate-200">
+                          <p className="text-sm font-medium text-slate-600">Overall Fraud Risk Score:</p>
+                          <ProgressBar 
+                            score={result.aiFraudRiskAssessment.overallFraudRiskScore} 
+                            maxScore={100} 
+                          />
+                        </div>
+                      )}
+                      
+                      {result.aiFraudRiskAssessment.keyRiskFactors?.length > 0 && (
+                        <div className="py-2 border-b border-slate-200">
+                          <p className="text-sm font-medium text-slate-600">Key Risk Factors:</p>
+                          <ul className="mt-1 space-y-2">
+                            {result.aiFraudRiskAssessment.keyRiskFactors.map((factor, idx) => (
+                              <li key={idx} className="text-xs bg-slate-100 p-2 rounded">
+                                <span className={`font-semibold ${
+                                  factor.severity === 'High' ? 'text-red-600' :
+                                  factor.severity === 'Medium' ? 'text-yellow-600' :
+                                  'text-slate-600'
+                                }`}>
+                                  {factor.factor} ({factor.severity})
+                                </span>
+                                <p className="text-slate-600 mt-0.5">{factor.details}</p>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {result.aiFraudRiskAssessment.recommendedActions?.length > 0 && (
+                        <div className="py-2">
+                          <p className="text-sm font-medium text-slate-600">Recommended Actions:</p>
+                          <ul className="list-disc list-inside mt-1 text-xs text-slate-700 space-y-0.5">
+                            {result.aiFraudRiskAssessment.recommendedActions.map((action, idx) => (
+                              <li key={idx}>{action}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {result.aiFraudRiskAssessment.confidenceInAssessment && (
+                        <p className="text-xs text-slate-500 mt-2 italic">
+                          AI Confidence: {result.aiFraudRiskAssessment.confidenceInAssessment}%
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="space-y-4">
+                  {result.securityAssessment.detectedSecurityFeatures && result.securityAssessment.detectedSecurityFeatures.length > 0 && (
+                    <div className="p-3 border border-slate-200 rounded-md bg-slate-50">
+                      <h4 className="text-md font-semibold text-slate-700 mb-2">Detected Security Features</h4>
+                      <ul className="list-disc list-inside pl-1 space-y-1">
+                        {result.securityAssessment.detectedSecurityFeatures.map((feature, idx) => (
+                          <li key={idx} className="text-sm text-slate-700">{feature}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {result.securityAssessment.suspiciousPatternsObserved && result.securityAssessment.suspiciousPatternsObserved.length > 0 && (
+                    <div className="p-3 border border-red-200 rounded-md bg-red-50">
+                      <h4 className="text-md font-semibold text-red-700 mb-2">Suspicious Patterns Observed</h4>
+                      <ul className="list-disc list-inside pl-1 space-y-1">
+                        {result.securityAssessment.suspiciousPatternsObserved.map((pattern, idx) => (
+                          <li key={idx} className="text-sm text-red-700">{pattern}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {result.securityAssessment.counterfeitLikelihoodScore !== null && (
+                    <div className="p-3 border border-slate-200 rounded-md bg-slate-50">
+                      <h4 className="text-md font-semibold text-slate-700 mb-2">Counterfeit Assessment</h4>
+                      <p className="text-sm font-medium text-slate-600 mb-1">Counterfeit Likelihood Score:</p>
+                      <ProgressBar 
+                        score={result.securityAssessment.counterfeitLikelihoodScore} 
+                        maxScore={100} 
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        {result.securityAssessment.counterfeitLikelihoodScore > 70 ? 'High likelihood of counterfeit - immediate action required' :
+                         result.securityAssessment.counterfeitLikelihoodScore > 40 ? 'Moderate counterfeit concerns - verify with financial institution' :
+                         'Low counterfeit likelihood - standard processing acceptable'}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="p-3 border border-slate-200 rounded-md bg-slate-50">
+                    <h4 className="text-md font-semibold text-slate-700 mb-2">Alteration Analysis</h4>
+                    {renderField("Alterations Evident", result.securityAssessment.alterationsEvident)}
+                    {renderField("Payee Name Altered", result.alterationsPayeeSuspected)}
+                    {renderField("Amount Altered", result.alterationsAmountSuspected)}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 text-center bg-slate-100 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-slate-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <p className="text-slate-600 font-medium">Security assessment data not available</p>
+                <p className="text-slate-500 text-sm mt-1">Try reanalyzing the cheque to generate security analysis</p>
+              </div>
+            )}
           </DashboardCard>
         )}
         
         {activeTab === 'imageQuality' && (
           <DashboardCard title="Image Quality Assessment" icon="📷">
-            <div className="text-center py-4 text-slate-500">
-              Image Quality tab content not yet implemented
-            </div>
+            {result.cpaImageQuality ? (
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="p-3 border border-slate-200 rounded-md bg-slate-50">
+                    <h4 className="text-md font-semibold text-slate-700 mb-2">CPA Standard 006 Compliance</h4>
+                    <div className="py-2 border-b border-slate-200 last:border-b-0">
+                      <p className="text-sm font-medium text-slate-600 flex items-center">
+                        Overall Compliance Status
+                        <StatusIndicator 
+                          status={result.cpaImageQuality.cpaStandard006Compliant}
+                          trueText="CPA 006 Compliant" 
+                          falseText="Non-Compliant" 
+                        />
+                      </p>
+                      <p className={`mt-1 text-sm ${result.cpaImageQuality.cpaStandard006Compliant ? 'text-green-600' : 'text-red-600'}`}>
+                        {result.cpaImageQuality.cpaStandard006Compliant ? 
+                          'This image meets CPA Standard 006 requirements' : 
+                          'This image does not meet one or more CPA Standard 006 requirements'}
+                      </p>
+                    </div>
+                    
+                    <div className="py-2 border-b border-slate-200 last:border-b-0">
+                      <p className="text-sm font-medium text-slate-600">MICR Line Readability:</p>
+                      <div className={`mt-1 px-3 py-1 rounded inline-block text-white ${
+                        result.cpaImageQuality.micrLineReadability === 'excellent' ? 'bg-green-600' :
+                        result.cpaImageQuality.micrLineReadability === 'good' ? 'bg-green-500' :
+                        result.cpaImageQuality.micrLineReadability === 'fair' ? 'bg-yellow-500 text-black' :
+                        result.cpaImageQuality.micrLineReadability === 'poor' ? 'bg-red-500' :
+                        'bg-slate-500'
+                      }`}>
+                        {result.cpaImageQuality.micrLineReadability || 'Unknown'}
+                      </div>
+                    </div>
+                    
+                    {result.cpaImageQuality.chequeDimensionsValid !== null && (
+                      <div className="py-2 border-b border-slate-200 last:border-b-0">
+                        <p className="text-sm font-medium text-slate-600 flex items-center">
+                          Cheque Dimensions Valid
+                          <StatusIndicator 
+                            status={result.cpaImageQuality.chequeDimensionsValid}
+                            trueText="Valid Dimensions" 
+                            falseText="Invalid Dimensions" 
+                          />
+                        </p>
+                      </div>
+                    )}
+                    
+                    {result.cpaImageQuality.micrClearBandDetected !== null && (
+                      <div className="py-2 last:border-b-0">
+                        <p className="text-sm font-medium text-slate-600 flex items-center">
+                          MICR Clear Band Detected
+                          <StatusIndicator 
+                            status={result.cpaImageQuality.micrClearBandDetected}
+                            trueText="Clear Band Detected" 
+                            falseText="Clear Band Not Detected" 
+                          />
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          CPA Standard 006 requires a 5/8" clear band around the MICR line
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {result.cpaImageQuality.imageResolutionDPI && (
+                    <div className="p-3 border border-slate-200 rounded-md bg-slate-50">
+                      <h4 className="text-md font-semibold text-slate-700 mb-2">Image Resolution</h4>
+                      <p className="text-sm font-medium text-slate-600">Estimated Resolution:</p>
+                      <p className="text-slate-700 text-lg font-semibold">
+                        {result.cpaImageQuality.imageResolutionDPI} DPI
+                      </p>
+                      <p className={`text-xs ${
+                        result.cpaImageQuality.imageResolutionDPI >= CPA_IMAGE_RESOLUTION_DPI.OPTIMAL ? 'text-green-600' :
+                        result.cpaImageQuality.imageResolutionDPI >= CPA_IMAGE_RESOLUTION_DPI.RECOMMENDED ? 'text-green-500' :
+                        result.cpaImageQuality.imageResolutionDPI >= CPA_IMAGE_RESOLUTION_DPI.MIN_FOR_MICR_READING ? 'text-yellow-600' :
+                        'text-red-600'
+                      }`}>
+                        {result.cpaImageQuality.imageResolutionDPI >= CPA_IMAGE_RESOLUTION_DPI.OPTIMAL ? 
+                          'Excellent - exceeds CPA recommended resolution' :
+                         result.cpaImageQuality.imageResolutionDPI >= CPA_IMAGE_RESOLUTION_DPI.RECOMMENDED ?
+                          'Good - meets CPA recommended resolution' :
+                         result.cpaImageQuality.imageResolutionDPI >= CPA_IMAGE_RESOLUTION_DPI.MIN_FOR_MICR_READING ?
+                          'Acceptable - meets minimum for MICR reading' :
+                          'Poor - below minimum recommended DPI for MICR reading'
+                        }
+                      </p>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="space-y-4">
+                  {result.cpaImageQuality.printContrastRatio !== null && (
+                    <div className="p-3 border border-slate-200 rounded-md bg-slate-50">
+                      <h4 className="text-md font-semibold text-slate-700 mb-2">Print Contrast</h4>
+                      <p className="text-sm font-medium text-slate-600">Print Contrast Ratio:</p>
+                      <ProgressBar 
+                        score={result.cpaImageQuality.printContrastRatio * 100} 
+                        maxScore={100} 
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        CPA Standard 006 requires a minimum contrast ratio of 0.60 (60%)
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="p-3 border border-slate-200 rounded-md bg-slate-50">
+                    <h4 className="text-md font-semibold text-slate-700 mb-2">Cheque Physical Properties</h4>
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <div>
+                        <p className="text-xs font-medium text-slate-500">Standard Dimensions:</p>
+                        <p className="text-slate-700">6.25" × 2.75" to 8.5" × 3.5"</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-slate-500">Standard Aspect Ratio:</p>
+                        <p className="text-slate-700">~2.27:1 (typical)</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      CPA Standard 006 specifies acceptable cheque dimensions for processing
+                    </p>
+                  </div>
+                  
+                  <div className="p-3 border border-amber-200 rounded-md bg-amber-50">
+                    <h4 className="text-md font-semibold text-amber-700 mb-2">Image Quality Tips</h4>
+                    <ul className="list-disc list-inside text-xs text-amber-700 space-y-1">
+                      <li>Use minimum 300 DPI for optimal MICR line reading</li>
+                      <li>Ensure even lighting with no glare or shadows</li>
+                      <li>Capture the full cheque with clear borders</li>
+                      <li>Position cheque straight (not skewed or rotated)</li>
+                      <li>Maintain high contrast between MICR line and background</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 text-center bg-slate-100 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-slate-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <p className="text-slate-600 font-medium">Image quality assessment not available</p>
+                <p className="text-slate-500 text-sm mt-1">Try reanalyzing the cheque to generate image quality data</p>
+              </div>
+            )}
           </DashboardCard>
         )}
         
         {activeTab === 'institutions' && (
           <DashboardCard title="Institution Directory" icon="🏦">
-            <div className="text-center py-4 text-slate-500">
-              Institution Directory tab content not yet implemented
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h4 className="text-md font-semibold text-blue-800 mb-2">Detected Institution</h4>
+              {result.institutionDetails ? (
+                <div className="space-y-3">
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-blue-700 rounded-full flex items-center justify-center text-white font-bold text-xl mr-3">
+                      {result.institutionDetails.shortName.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <h5 className="text-blue-900 font-semibold text-lg">{result.institutionDetails.commonName}</h5>
+                      <p className="text-sm text-blue-800">{result.institutionDetails.name}</p>
+                    </div>
+                    {result.isInstitutionLocallyValidated && (
+                      <span className="ml-auto bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                        Validated
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-slate-500 font-medium">Institution #:</p>
+                      <p className="font-mono text-blue-800">{result.institutionDetails.institutionNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 font-medium">Type:</p>
+                      <p className="text-blue-800">{result.institutionDetails.type}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 font-medium">Status:</p>
+                      <p className={`${
+                        result.institutionDetails.status === 'Active' ? 'text-green-600' : 
+                        result.institutionDetails.status === 'Merged' || result.institutionDetails.status === 'Acquired' ? 'text-amber-600' : 
+                        'text-red-600'
+                      } font-medium`}>
+                        {result.institutionDetails.status}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 font-medium">CDIC Insured:</p>
+                      <p className="text-blue-800">{result.institutionDetails.cdic ? 'Yes' : 'No'}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 font-medium">Regulator:</p>
+                      <p className="text-blue-800">{result.institutionDetails.regulatoryBody}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 font-medium">Risk Profile:</p>
+                      <p className={`font-medium ${
+                        result.institutionDetails.riskProfile === 'Low' ? 'text-green-600' : 
+                        result.institutionDetails.riskProfile === 'Medium' ? 'text-amber-600' : 
+                        'text-red-600'
+                      }`}>
+                        {result.institutionDetails.riskProfile}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <a 
+                      href={result.institutionDetails.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5 mr-1.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                      </svg>
+                      Website
+                    </a>
+                    
+                    {result.institutionDetails.customerService && (
+                      <a 
+                        href={`tel:${result.institutionDetails.customerService.replace(/\s/g, '')}`}
+                        className="inline-flex items-center px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5 mr-1.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                        </svg>
+                        Customer Service
+                      </a>
+                    )}
+                    
+                    {result.institutionDetails.verificationPhone && (
+                      <a 
+                        href={`tel:${result.institutionDetails.verificationPhone.replace(/\s/g, '')}`}
+                        className="inline-flex items-center px-3 py-1.5 text-xs bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5 mr-1.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Verification Line
+                      </a>
+                    )}
+                  </div>
+                  
+                  {result.institutionDetails.specialNotes && (
+                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-md text-xs text-amber-800 mt-2">
+                      <p className="font-medium">Special Notes:</p>
+                      <p className="mt-0.5">{result.institutionDetails.specialNotes}</p>
+                    </div>
+                  )}
+                </div>
+              ) : result.aiInstitutionRecognition && result.aiInstitutionRecognition.recognizedInstitutionName ? (
+                <div>
+                  <p className="text-blue-800 font-medium">AI recognized institution: {result.aiInstitutionRecognition.recognizedInstitutionName}</p>
+                  <p className="text-sm text-slate-600 mt-1">Confidence: {result.aiInstitutionRecognition.confidenceScore || 'N/A'}%</p>
+                  
+                  {result.aiInstitutionRecognition.institutionTypeGuess && (
+                    <p className="text-sm text-slate-600">Type: {result.aiInstitutionRecognition.institutionTypeGuess}</p>
+                  )}
+                  
+                  {result.aiInstitutionRecognition.visualElementsUsed && result.aiInstitutionRecognition.visualElementsUsed.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-xs text-slate-500">Visual elements used for identification:</p>
+                      <ul className="list-disc list-inside text-xs text-slate-600 mt-0.5">
+                        {result.aiInstitutionRecognition.visualElementsUsed.map((element, idx) => (
+                          <li key={idx}>{element}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  <p className="text-xs text-amber-600 mt-3">Note: This institution was recognized by AI but not validated against the banking database.</p>
+                </div>
+              ) : result.transitNumber ? (
+                <div>
+                  <p className="text-amber-700 font-medium">
+                    Institution not definitively identified
+                  </p>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Transit number: {result.transitNumber}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    Institution code: {result.transitNumber.substring(5, 8)}
+                  </p>
+                  <p className="text-xs text-amber-600 mt-2">
+                    The institution could not be conclusively identified. Consider searching the directory below.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-red-600 font-medium">No institution detected</p>
+                  <p className="text-sm text-slate-600 mt-1">No institution could be identified from this cheque</p>
+                  <p className="text-xs text-red-600 mt-2">
+                    This may indicate a non-standard cheque format or poor image quality. Consider manual verification.
+                  </p>
+                </div>
+              )}
             </div>
+            
+            <h4 className="text-lg font-semibold text-blue-800 mb-3">Canadian Financial Institutions Directory</h4>
+            <InstitutionSearchWidget />
           </DashboardCard>
         )}
       </div>
