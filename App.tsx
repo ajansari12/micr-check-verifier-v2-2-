@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, Profiler, ProfilerOnRenderCallback, useMemo } from 'react';
 // Components
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -74,7 +73,6 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false); 
   const [isProcessingImage, setIsProcessingImage] = useState<boolean>(false); 
   const [alertInfo, setAlertInfo] = useState<CanadianBankingAlertInfoProps | null>(null);
-  const [apiKeyStatus, setApiKeyStatus] = useState<'checking' | 'ok' | 'missing'>('checking');
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [appMode, setAppMode] = useState<AppMode>('idle');
   const [wizardActiveStep, setWizardActiveStep] = useState<number>(1);
@@ -88,18 +86,6 @@ const App: React.FC = () => {
 
 
   useEffect(() => {
-    if (process.env.API_KEY) {
-      setApiKeyStatus('ok');
-    } else {
-      setApiKeyStatus('missing');
-      setAlertInfo({
-        title: "API Key Missing",
-        message: "Gemini API Key is not configured. Please set the API_KEY environment variable for the app to function.",
-        type: 'critical',
-        onDismiss: () => setAlertInfo(null),
-        canDismiss: false,
-      });
-    }
     const mobileCheck = navigator.maxTouchPoints > 0 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     setIsMobile(mobileCheck);
   }, []);
@@ -169,10 +155,6 @@ const App: React.FC = () => {
   }, []);
 
   const processCheckImage = useCallback(async (isReanalysis = false) => {
-    if (apiKeyStatus === 'missing') {
-      setAlertInfo({ title: "API Key Error", message: "API Key is not configured. Analysis cannot proceed.", type: 'critical', onDismiss: () => setAlertInfo(null) });
-      return;
-    }
     if (!imageBase64ForApi || !selectedImageFile || !htmlImageElementForAnalysis) {
       setAlertInfo({ title: "Image Not Ready", message: "Image data is not fully prepared. Please complete image selection.", type: 'warning', autoDismiss: true, autoDismissDelay: 5000, onDismiss: () => setAlertInfo(null) });
       return;
@@ -327,7 +309,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [apiKeyStatus, imageBase64ForApi, selectedImageFile, imageBase64Preview, htmlImageElementForAnalysis, appOperatingMode]);
+  }, [imageBase64ForApi, selectedImageFile, imageBase64Preview, htmlImageElementForAnalysis, appOperatingMode]);
 
   const errorBoundaryFallback = (
     <div className="p-4 my-6 text-center bg-red-50 border border-red-200 rounded-lg">
@@ -505,20 +487,7 @@ const App: React.FC = () => {
 
         <ErrorBoundary fallback={errorBoundaryFallback}>
           <main className="w-full max-w-6xl mx-auto mt-1 print:mt-0"> 
-            {apiKeyStatus === 'missing' && (!alertInfo || alertInfo.type !== 'critical' || !(typeof alertInfo.message === 'string' && alertInfo.message.includes("API Key"))) && (
-                <div className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 print:hidden" role="alert">
-                  <span className="font-medium">API Key Error!</span> Gemini API Key is not configured.
-                </div>
-            )}
-
-            {isReportingModeActive && apiKeyStatus === 'ok' && (
-                <ComplianceReportGenerator
-                    chequeResults={chequeResult ? [chequeResult] : null} 
-                    onClose={() => setIsReportingModeActive(false)}
-                />
-            )}
-
-            {!isReportingModeActive && appOperatingMode === 'single' && appMode === 'idle' && apiKeyStatus === 'ok' && (
+            {!isReportingModeActive && appOperatingMode === 'single' && appMode === 'idle' && (
               <div className="text-center p-8 bg-white rounded-xl shadow-xl border border-slate-200 print:hidden max-w-2xl mx-auto">
                 <h2 className="text-2xl font-semibold text-blue-800 mb-4">Ready to Verify a Single Cheque?</h2>
                 <p className="text-slate-600 mb-6">
@@ -533,7 +502,7 @@ const App: React.FC = () => {
               </div>
             )}
             
-            {!isReportingModeActive && appOperatingMode === 'single' && appMode === 'wizardActive' && apiKeyStatus === 'ok' && (
+            {!isReportingModeActive && appOperatingMode === 'single' && appMode === 'wizardActive' && (
               <VerificationWizard
                 activeStep={wizardActiveStep}
                 onStepChange={setWizardActiveStep}
@@ -556,12 +525,19 @@ const App: React.FC = () => {
               />
             )}
 
-            {!isReportingModeActive && appOperatingMode === 'batch' && apiKeyStatus === 'ok' && (
+            {!isReportingModeActive && appOperatingMode === 'batch' && (
               <OperationsDashboard
                 batches={mockBatches}
                 onBatchSubmit={handleBatchSubmit}
                 isUploadingBatch={isUploadingBatchGlobal}
               />
+            )}
+
+            {isReportingModeActive && (
+                <ComplianceReportGenerator
+                    chequeResults={chequeResult ? [chequeResult] : null} 
+                    onClose={() => setIsReportingModeActive(false)}
+                />
             )}
 
           </main>
