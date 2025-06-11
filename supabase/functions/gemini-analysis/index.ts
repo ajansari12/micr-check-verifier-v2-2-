@@ -25,36 +25,144 @@ serve(async (req) => {
     // Get Gemini API key from Supabase secrets
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
     if (!geminiApiKey) {
-      throw new Error('GEMINI_API_KEY not found in environment variables')
+      console.error('GEMINI_API_KEY not found in environment variables')
+      return new Response(
+        JSON.stringify({ 
+          error: 'GEMINI_API_KEY not configured in Supabase secrets. Please run: supabase secrets set GEMINI_API_KEY=your_api_key_here',
+          processingNotes: 'Missing API key configuration - contact system administrator'
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      )
     }
 
     // Initialize Gemini AI
-    const genAI = new GoogleGenerativeAI(geminiApiKey)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+    let genAI: GoogleGenerativeAI
+    let model: any
+    
+    try {
+      genAI = new GoogleGenerativeAI(geminiApiKey)
+      model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+    } catch (error) {
+      console.error('Failed to initialize Gemini AI:', error)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid GEMINI_API_KEY or Gemini AI service unavailable. Please verify your API key is valid.',
+          processingNotes: 'Gemini AI initialization failed - check API key validity'
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      )
+    }
 
     let result: any
 
     switch (operation) {
       case 'analyzeChequeDetails':
-        result = await analyzeChequeDetails(model, imageBase64!)
+        if (!imageBase64) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Missing imageBase64 parameter for analyzeChequeDetails operation',
+              processingNotes: 'Invalid request parameters'
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          )
+        }
+        result = await analyzeChequeDetails(model, imageBase64)
         break
       case 'analyzeSecurityFeatures':
-        result = await analyzeSecurityFeatures(model, imageBase64!)
+        if (!imageBase64) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Missing imageBase64 parameter for analyzeSecurityFeatures operation',
+              processingNotes: 'Invalid request parameters'
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          )
+        }
+        result = await analyzeSecurityFeatures(model, imageBase64)
         break
       case 'analyzeCanadianBankingCompliance':
-        result = await analyzeCanadianBankingCompliance(model, imageBase64!)
+        if (!imageBase64) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Missing imageBase64 parameter for analyzeCanadianBankingCompliance operation',
+              processingNotes: 'Invalid request parameters'
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          )
+        }
+        result = await analyzeCanadianBankingCompliance(model, imageBase64)
         break
       case 'detectCanadianInstitution':
-        result = await detectCanadianInstitution(model, imageBase64!)
+        if (!imageBase64) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Missing imageBase64 parameter for detectCanadianInstitution operation',
+              processingNotes: 'Invalid request parameters'
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          )
+        }
+        result = await detectCanadianInstitution(model, imageBase64)
         break
       case 'assessFraudRisk':
-        result = await assessFraudRisk(model, imageBase64!)
+        if (!imageBase64) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Missing imageBase64 parameter for assessFraudRisk operation',
+              processingNotes: 'Invalid request parameters'
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          )
+        }
+        result = await assessFraudRisk(model, imageBase64)
         break
       case 'generateDecisionIntelligence':
-        result = await generateDecisionIntelligence(model, initialChequeData!, institutionContext)
+        if (!initialChequeData) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Missing initialChequeData parameter for generateDecisionIntelligence operation',
+              processingNotes: 'Invalid request parameters'
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          )
+        }
+        result = await generateDecisionIntelligence(model, initialChequeData, institutionContext)
         break
       default:
-        throw new Error(`Unknown operation: ${operation}`)
+        return new Response(
+          JSON.stringify({ 
+            error: `Unknown operation: ${operation}`,
+            processingNotes: 'Invalid operation requested'
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        )
     }
 
     return new Response(JSON.stringify(result), {
@@ -63,10 +171,40 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in gemini-analysis function:', error)
+    
+    // Handle specific Google AI API errors
+    if (error instanceof Error) {
+      if (error.message.includes('API key not valid') || error.message.includes('Invalid API key')) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Invalid GEMINI_API_KEY. Please verify your API key is correct and has proper permissions.',
+            processingNotes: 'Gemini API authentication failed - check API key'
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        )
+      }
+      
+      if (error.message.includes('quota') || error.message.includes('rate limit')) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Gemini API quota exceeded or rate limit reached. Please try again later.',
+            processingNotes: 'API rate limit or quota exceeded'
+          }),
+          {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        )
+      }
+    }
+    
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-        processingNotes: 'Server-side processing failed'
+        error: error instanceof Error ? error.message : 'Unknown error occurred in Gemini analysis',
+        processingNotes: 'Server-side processing failed - check function logs for details'
       }),
       {
         status: 500,
@@ -135,20 +273,25 @@ async function analyzeChequeDetails(model: any, imageBase64: string) {
     Be meticulous. Cross-verify information (e.g., amount in numerals vs. words if possible, though this is primarily extraction).
   `
 
-  const result = await model.generateContent([
-    { text: prompt },
-    {
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: imageBase64
+  try {
+    const result = await model.generateContent([
+      { text: prompt },
+      {
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: imageBase64
+        }
       }
-    }
-  ])
+    ])
 
-  const response = await result.response
-  const text = response.text()
-  
-  return parseJsonResponse(text, {}, "analyzeChequeDetails")
+    const response = await result.response
+    const text = response.text()
+    
+    return parseJsonResponse(text, {}, "analyzeChequeDetails")
+  } catch (error) {
+    console.error('Error in analyzeChequeDetails:', error)
+    throw error
+  }
 }
 
 async function analyzeSecurityFeatures(model: any, imageBase64: string) {
@@ -175,20 +318,25 @@ async function analyzeSecurityFeatures(model: any, imageBase64: string) {
     Provide null for fields you cannot determine.
   `
 
-  const result = await model.generateContent([
-    { text: prompt },
-    {
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: imageBase64
+  try {
+    const result = await model.generateContent([
+      { text: prompt },
+      {
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: imageBase64
+        }
       }
-    }
-  ])
+    ])
 
-  const response = await result.response
-  const text = response.text()
-  
-  return parseJsonResponse(text, { detectedSecurityFeatures: [], suspiciousPatternsObserved: [] }, "analyzeSecurityFeatures")
+    const response = await result.response
+    const text = response.text()
+    
+    return parseJsonResponse(text, { detectedSecurityFeatures: [], suspiciousPatternsObserved: [] }, "analyzeSecurityFeatures")
+  } catch (error) {
+    console.error('Error in analyzeSecurityFeatures:', error)
+    throw error
+  }
 }
 
 async function analyzeCanadianBankingCompliance(model: any, imageBase64: string) {
@@ -216,20 +364,25 @@ async function analyzeCanadianBankingCompliance(model: any, imageBase64: string)
     Provide null for fields you cannot determine.
   `
 
-  const result = await model.generateContent([
-    { text: prompt },
-    {
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: imageBase64
+  try {
+    const result = await model.generateContent([
+      { text: prompt },
+      {
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: imageBase64
+        }
       }
-    }
-  ])
+    ])
 
-  const response = await result.response
-  const text = response.text()
-  
-  return parseJsonResponse(text, { overallCPA006ComplianceNotes: [] }, "analyzeCanadianBankingCompliance")
+    const response = await result.response
+    const text = response.text()
+    
+    return parseJsonResponse(text, { overallCPA006ComplianceNotes: [] }, "analyzeCanadianBankingCompliance")
+  } catch (error) {
+    console.error('Error in analyzeCanadianBankingCompliance:', error)
+    throw error
+  }
 }
 
 async function detectCanadianInstitution(model: any, imageBase64: string) {
@@ -254,20 +407,25 @@ async function detectCanadianInstitution(model: any, imageBase64: string) {
     Provide null for fields you cannot determine. If no institution is clearly identifiable from visual non-MICR elements, set recognizedInstitutionName to null and confidence low.
   `
 
-  const result = await model.generateContent([
-    { text: prompt },
-    {
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: imageBase64
+  try {
+    const result = await model.generateContent([
+      { text: prompt },
+      {
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: imageBase64
+        }
       }
-    }
-  ])
+    ])
 
-  const response = await result.response
-  const text = response.text()
-  
-  return parseJsonResponse(text, { visualElementsUsed: [] }, "detectCanadianInstitution")
+    const response = await result.response
+    const text = response.text()
+    
+    return parseJsonResponse(text, { visualElementsUsed: [] }, "detectCanadianInstitution")
+  } catch (error) {
+    console.error('Error in detectCanadianInstitution:', error)
+    throw error
+  }
 }
 
 async function assessFraudRisk(model: any, imageBase64: string) {
@@ -297,20 +455,25 @@ async function assessFraudRisk(model: any, imageBase64: string) {
     Provide null for fields you cannot determine.
   `
 
-  const result = await model.generateContent([
-    { text: prompt },
-    {
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: imageBase64
+  try {
+    const result = await model.generateContent([
+      { text: prompt },
+      {
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: imageBase64
+        }
       }
-    }
-  ])
+    ])
 
-  const response = await result.response
-  const text = response.text()
-  
-  return parseJsonResponse(text, { keyRiskFactors: [], recommendedActions: [] }, "assessFraudRisk")
+    const response = await result.response
+    const text = response.text()
+    
+    return parseJsonResponse(text, { keyRiskFactors: [], recommendedActions: [] }, "assessFraudRisk")
+  } catch (error) {
+    console.error('Error in assessFraudRisk:', error)
+    throw error
+  }
 }
 
 async function generateDecisionIntelligence(model: any, initialChequeData: any, institutionContext: any) {
@@ -403,34 +566,39 @@ async function generateDecisionIntelligence(model: any, initialChequeData: any, 
     Prioritize clarity, actionability, and Canadian banking context. Be decisive based on the inputs.
   `
 
-  const result = await model.generateContent([{ text: prompt }])
-  const response = await result.response
-  const text = response.text()
-  
-  const fallback = {
-    overallRiskAssessment: { 
-      riskLevel: 'Review', 
-      confidence: 50, 
-      reasonsForConcern: ["AI decision generation fallback."], 
-      recommendedActions: ["Manual review suggested."],
-      similarCases: []
-    },
-    operationsGuidance: { 
-      immediateAction: 'Route to Supervisor', 
-      documentationRequired: ["Note AI fallback."], 
-      processingTimeframe: 'Expedited Review',
-      escalationPath: null
-    },
-    institutionContext: institutionContext || { 
-      bankName: "Unknown", 
-      institutionRiskProfile: 'Unknown',
-      recentIssuesWithInstitution: [],
-      keyVerificationContacts: []
-    },
-    summaryStatement: "AI decision generation fallback; manual review suggested."
+  try {
+    const result = await model.generateContent([{ text: prompt }])
+    const response = await result.response
+    const text = response.text()
+    
+    const fallback = {
+      overallRiskAssessment: { 
+        riskLevel: 'Review', 
+        confidence: 50, 
+        reasonsForConcern: ["AI decision generation fallback."], 
+        recommendedActions: ["Manual review suggested."],
+        similarCases: []
+      },
+      operationsGuidance: { 
+        immediateAction: 'Route to Supervisor', 
+        documentationRequired: ["Note AI fallback."], 
+        processingTimeframe: 'Expedited Review',
+        escalationPath: null
+      },
+      institutionContext: institutionContext || { 
+        bankName: "Unknown", 
+        institutionRiskProfile: 'Unknown',
+        recentIssuesWithInstitution: [],
+        keyVerificationContacts: []
+      },
+      summaryStatement: "AI decision generation fallback; manual review suggested."
+    }
+    
+    return parseJsonResponse(text, fallback, "generateDecisionIntelligence")
+  } catch (error) {
+    console.error('Error in generateDecisionIntelligence:', error)
+    throw error
   }
-  
-  return parseJsonResponse(text, fallback, "generateDecisionIntelligence")
 }
 
 function parseJsonResponse(jsonStr: string, fallbackResult: any, operationName: string) {
