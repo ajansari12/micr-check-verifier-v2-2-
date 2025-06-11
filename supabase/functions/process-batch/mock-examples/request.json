@@ -1,0 +1,35 @@
+{
+  "batchId": "BATCH-DEMO-20250612",
+  "batchName": "June 2025 Cheque Batch",
+  "batchType": "images",
+  "files": [
+    {
+      "id": "cheque_001",
+      "name": "RBC_Cheque_001.jpg",
+      "data": "base64EncodedImageData...",
+      "fileType": "image/jpeg"
+    },
+    {
+      "id": "cheque_002",
+      "name": "TD_Cheque_002.jpg",
+      "data": "base64EncodedImageData...",
+      "fileType": "image/jpeg"
+    }
+  ],
+  "processingOptions": {
+    "priorityLevel": "medium",
+    "processingMode": "standard",
+    "verificationLevel": "enhanced",
+    "parallelProcessing": true,
+    "itemsPerSecond": 2
+  },
+  "metadata": {
+    "department": "Finance",
+    "operator": "John Doe",
+    "description": "Daily cheque batch for processing",
+    "batchNumber": "B20250612-001"
+  },
+  "userId": "user_123",
+  "operatorId": "operator_456",
+  "branchCode": "00123"
+}

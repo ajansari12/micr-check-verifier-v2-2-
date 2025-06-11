@@ -1,0 +1,17 @@
+{
+  "batchId": "BATCH-DEMO-20250612",
+  "status": "queued",
+  "totalItems": 2,
+  "processedItems": 0,
+  "successfulItems": 0,
+  "failedItems": 0,
+  "itemIds": ["cheque_001", "cheque_002"],
+  "processingStats": {
+    "startTime": "2025-06-12T12:34:56.789Z"
+  },
+  "processingTime": 137,
+  "nextActions": [
+    "Check batch status periodically",
+    "Retrieve detailed results when processing is complete"
+  ]
+}
