@@ -11,7 +11,7 @@ import { API_MAX_RETRIES, API_RETRY_DELAY_MS } from '../constants';
 
 // Supabase configuration
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ansjwcydepcdfypykvnb.supabase.co';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFuc2p3Y3lkZXBjZGZ5cHlrdm5iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2MTAzNTUsImV4cCI6MjA2NTE4NjM1NX0.moWhD7dvQ6c8ryQZk3jJ36e4YcTMv6-eWw5DsYaDSB8';
 
 // Custom error class for Supabase connection issues
 class SupabaseConnectionError extends Error {
